@@ -1,5 +1,5 @@
 {
-  "name": "app",
+  "name": "my-project",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -30,6 +30,8 @@
     "expo-symbols": "~0.2.0",
     "expo-system-ui": "~4.0.3",
     "expo-web-browser": "~14.0.1",
+    "my-project": "file:",
+    "my-project-app": "file:",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.2",

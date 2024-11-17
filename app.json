@@ -36,6 +36,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "aa683c4a-3b90-4080-abb8-5539abbca8b0"
+      }
+    },
+    "owner": "jonas_lima"
   }
 }
