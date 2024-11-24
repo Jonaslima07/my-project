@@ -1,19 +1,18 @@
 import React from "react";
-import { View, StyleSheet, Image, Text } from "react-native";
+import {SafeAreaView,  StyleSheet, Image, Text } from "react-native";
 
 export default function Header() {
   return (
-    <View style={styles.container}>
-      
+    <SafeAreaView style={styles.container}>
       <Image 
         source={require('../assets/images/JLCell.jpg')} 
         style={styles.image} 
       />
       
-     <View style={styles.textContainer}>
+     <SafeAreaView style={styles.textContainer}>
         <Text style={styles.text}>JL Cell</Text>
-     </View>
-    </View>
+     </SafeAreaView>
+    </SafeAreaView>
   );
 }
 
