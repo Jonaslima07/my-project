@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  Alert,
-} from 'react-native';
+import { View,Text, TouchableOpacity, Modal, StyleSheet, TextInput, FlatList, Alert } from 'react-native';
 import { IVenda } from '@/components/interface/IVenda';
 
 export default function VendaModal() {
@@ -43,12 +34,12 @@ export default function VendaModal() {
 
   return (
     <View style={styles.container}>
-      {/* Botão para abrir o modal */}
+      
       <TouchableOpacity style={styles.openButton} onPress={() => setVisible(true)}>
-        <Text style={styles.openButtonText}>Adicionar Venda</Text>
+        <Text style={styles.openButtonText}>+</Text>
       </TouchableOpacity>
 
-      {/* Modal */}
+     
       <Modal visible={visible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -84,7 +75,7 @@ export default function VendaModal() {
         </View>
       </Modal>
 
-      {/* Lista de vendas */}
+      
       <FlatList
         data={vendas}
         keyExtractor={(item) => item.numPedido.toString()}
@@ -110,8 +101,12 @@ const styles = StyleSheet.create({
   },
   openButton: {
     backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 5,
+    width: 40,
+    height: 40,
+    bottom: 5,
+    left: 320,
+    borderRadius: 100,
+    padding: 10,
     alignItems: 'center',
   },
   openButtonText: {
