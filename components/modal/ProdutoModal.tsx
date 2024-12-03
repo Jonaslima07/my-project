@@ -1,27 +1,17 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  TextInput,
-  Alert,
-  FlatList,
-} from "react-native";
+import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, Alert, FlatList } from "react-native";
 import { IProdutos } from "@/components/interface/IProdutos";
 
 export default function ProdutoModal() {
   const [visible, setVisible] = useState(false);
   const [nome, setNome] = useState("");
-  const [marca, setMarca] = useState("");
+  const [marca, setMarca] = useState('');
   const [preco, setPreco] = useState(0);
   const [descricao, setDescricao] = useState("");
-
-
   const [produtos, setProdutos] = useState<IProdutos[]>([]);
+  const [Index, setIndex] = useState<number | null>(null);
 
-  const handleAdd = () => {
+  const handleAddOrUpdate = () => {
     if (nome.trim() === "" || descricao.trim() === "") {
       Alert.alert("Preencha todos os campos para prosseguir!");
       return;
@@ -32,21 +22,66 @@ export default function ProdutoModal() {
       descricao,
       marca,
       preco,
-      
     };
 
-    setProdutos([...produtos, novoProduto]);
+    if (Index !== null) {
+      
+      Update(Index, novoProduto);
+    } else {
+      
+      setProdutos([...produtos, novoProduto]);
+    }
+
+    
     setNome("");
     setDescricao("");
+    setMarca("");
+    setPreco(0);
     setVisible(false);
+    setIndex(null);
   };
 
   const handleCancel = () => {
     setNome("");
     setDescricao("");
+    setMarca("");
+    setPreco(0);
     setVisible(false);
+    setIndex(null);
+  };
+
+  const handleDeleteProduto = (index: number) => {
+    Alert.alert(
+      "Confirmar Exclusão",
+      "Você tem certeza de que deseja excluir este produto?",
+      [
+        { text: "Não", style: "cancel" },
+        {
+          text: "Sim",
+          onPress: () => {
+            setProdutos((prevProdutos) => prevProdutos.filter((_, i) => i !== index));
+            
+          },
+        },
+      ]
+    );
   };
   
+  const Update = (index: number, updatedProduto: IProdutos) => {
+    const atualizar = [...produtos];
+    atualizar[index] = updatedProduto; 
+    setProdutos(atualizar);
+  };
+
+  const handleEdit = (index: number) => {
+    const produto = produtos[index];
+    setNome(produto.nome);
+    setDescricao(produto.descricao);
+    setMarca(produto.marca);
+    setPreco(produto.preco);
+    setVisible(true);
+    setIndex(index);
+  };
 
   return (
     <View style={styles.container}>
@@ -56,7 +91,6 @@ export default function ProdutoModal() {
       >
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
-      
 
       <Modal
         visible={visible}
@@ -66,7 +100,9 @@ export default function ProdutoModal() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Adicionar Produto</Text>
+            <Text style={styles.modalTitle}>
+              {Index !== null ? "Editar Produto" : "Adicionar Produto"}
+            </Text>
 
             <TextInput
               style={styles.textInput}
@@ -96,20 +132,21 @@ export default function ProdutoModal() {
                 const parsedPrice = parseFloat(text);
                 if (!isNaN(parsedPrice)) {
                   setPreco(parsedPrice);
+                } else {
+                  setPreco(0);
                 }
               }}
               keyboardType="numeric"
             />
-            
-
-           
 
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.addButtonModal}
-                onPress={handleAdd}
+                onPress={handleAddOrUpdate}
               >
-                <Text style={styles.buttonText}>Adicionar</Text>
+                <Text style={styles.buttonText}>
+                  {Index !== null ? "Atualizar" : "Adicionar"}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelButtonModal}
@@ -123,21 +160,37 @@ export default function ProdutoModal() {
       </Modal>
 
       <FlatList
-        style={styles.listContainer}
-        data={produtos}
-        keyExtractor={(item, index) => index.toString()} // A chave para o item
-        renderItem={({ item }) => (
-          <View style={styles.personContainer}>
-            <Text style={styles.personName}>{item.nome}</Text>
-            <Text style={styles.personDescription}>{item.descricao}</Text>
-            <Text style={styles.personDescription}>Marca: {item.marca}</Text>
-            <Text style={styles.personDescription}>Preço: R${item.preco}</Text>
-          </View>
-        )}
-      />
+  style={styles.listContainer}
+  data={produtos}
+  keyExtractor={(item, index) => index.toString()}
+  renderItem={({ item, index }) => (
+    <View style={styles.personContainer}>
+      <Text style={styles.personName}>{item.nome}</Text>
+      <Text style={styles.personDescription}>{item.descricao}</Text>
+      <Text style={styles.personDescription}>Marca: {item.marca}</Text>
+      <Text style={styles.personDescription}>Preço: R${item.preco}</Text>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => handleDeleteProduto(index)}
+        >
+          <Text style={styles.deleteButtonText}>Excluir</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => handleEdit(index)}
+        >
+          <Text style={styles.editButtonText}>Editar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  )}
+/>
+
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     justifyContent: "center",
@@ -158,14 +211,16 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: "#fff",
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "bold",
   },
   modalOverlay: {
     flex: 1,
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.8)",
+    
   },
   modalContent: {
     width: "80%",
@@ -175,29 +230,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 40,
+    marginBottom: 30,
   },
   textInput: {
     width: "100%",
-    height: 40,
+    height: 45,
     borderColor: "#ccc",
     borderWidth: 1,
     borderRadius: 5,
     marginBottom: 20,
     paddingHorizontal: 10,
+    fontSize: 16,
     color: "#333",
   },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-  },
+  
   addButtonModal: {
     backgroundColor: "#4CAF50",
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     flex: 1,
     marginRight: 10,
@@ -205,7 +257,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonModal: {
     backgroundColor: "#f44336",
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     flex: 1,
     marginLeft: 10,
@@ -227,6 +279,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#ddd",
+    elevation: 1,
   },
   personName: {
     fontSize: 18,
@@ -236,5 +289,40 @@ const styles = StyleSheet.create({
   personDescription: {
     fontSize: 14,
     color: "#555",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center", 
+    alignItems: "center", 
+    marginTop: 10,
+    gap: 5,
+  },
+  deleteButton: {
+    backgroundColor: "#f44336",
+    paddingVertical: 8,
+    borderRadius: 50,
+    alignItems: "center",
+    width: "20%",
+    marginHorizontal: 100,
+  },
+  editButton: {
+    backgroundColor: "blue",
+    paddingVertical: 8,
+    borderRadius: 50,
+    alignItems: "center",
+    width: "20%", 
+    marginHorizontal: -90,
+  },
+  
+  deleteButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+ 
+  editButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });

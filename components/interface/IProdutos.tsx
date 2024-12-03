@@ -1,9 +1,7 @@
 export interface IProdutos {
     nome: string;
     descricao: string;
-    marca: String;
+    marca: string;
     preco: number;
-    
-
-  }
+};
   

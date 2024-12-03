@@ -1,7 +1,7 @@
 export interface IVenda{
     numPedido: number,
-    nome: String,
-    produto: String,
+    nome: string,
+    produto: string,
     data: Date,
     valor: number
 }
