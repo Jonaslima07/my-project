@@ -1,15 +1,10 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  Alert,
-} from "react-native";
-import { IVenda } from "@/components/interface/IVenda";
+import React, { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, FlatList, Alert } from "react-native";
+import * as Location from "expo-location";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { IVenda } from "../interface/IVenda";
+
+
 
 export default function VendaModal() {
   const [visible, setVisible] = useState(false);
@@ -20,8 +15,55 @@ export default function VendaModal() {
   const [numPedido, setNumPedido] = useState(1);
   const [editMode, setEditMode] = useState(false);
   const [editVenda, setEditVenda] = useState<IVenda | null>(null);
+  const [localizacao, setLocalizacao] = useState("");
 
-  const handleAddVenda = () => {
+  useEffect(() => {
+    loadVendas();
+  }, []);
+
+  const obterLocalizacao = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permissão negada",
+          "Para acessar sua localização, a permissão é necessária."
+        );
+        return;
+      }
+      let location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+      setLocalizacao(`Latitude: ${latitude}, Longitude: ${longitude}`);
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível obter a localização.");
+    }
+  };
+
+  const loadVendas = async () => {
+    try {
+      const savedVendas = await AsyncStorage.getItem("vendas");
+      if (savedVendas) {
+        setVendas(JSON.parse(savedVendas));
+        const maxNumPedido = Math.max(
+          ...JSON.parse(savedVendas).map((venda: IVenda) => venda.numPedido),
+          0
+        );
+        setNumPedido(maxNumPedido + 1);
+      }
+    } catch (error) {
+      console.log("Erro ao carregar vendas:", error);
+    }
+  };
+
+  const saveVendas = async (vendas: IVenda[]) => {
+    try {
+      await AsyncStorage.setItem("vendas", JSON.stringify(vendas));
+    } catch (error) {
+      console.log("Erro ao salvar vendas:", error);
+    }
+  };
+
+  const handleAddVenda = async () => {
     if (!nomeCliente || !produto || parseFloat(valorTotal) <= 0) {
       Alert.alert("Erro", "Preencha todos os campos corretamente.");
       return;
@@ -33,36 +75,14 @@ export default function VendaModal() {
       produto,
       data: new Date(),
       valor: parseFloat(valorTotal),
+      localizacao,
     };
 
-    setVendas((prevVendas) => [...prevVendas, novaVenda]);
-    setNumPedido((prevNum) => prevNum + 1);
-    setNomeCliente("");
-    setProduto("");
-    setValorTotal("");
-    setVisible(false);
-  };
+    const novasVendas = [...vendas, novaVenda];
+    setVendas(novasVendas);
+    setNumPedido(numPedido + 1);
+    saveVendas(novasVendas);
 
-  const handleUpdateVenda = () => {
-    if (!nomeCliente || !produto || parseFloat(valorTotal) <= 0) {
-      Alert.alert("Erro", "Preencha todos os campos corretamente.");
-      return;
-    }
-
-    const updatedVenda: IVenda = {
-      ...editVenda!,
-      nome: nomeCliente,
-      produto,
-      valor: parseFloat(valorTotal),
-    };
-
-    setVendas((prevVendas) =>
-      prevVendas.map((venda) =>
-        venda.numPedido === updatedVenda.numPedido ? updatedVenda : venda
-      )
-    );
-    setEditMode(false);
-    setEditVenda(null);
     setNomeCliente("");
     setProduto("");
     setValorTotal("");
@@ -70,21 +90,19 @@ export default function VendaModal() {
   };
 
   const handleDeleteVenda = (numPedido: number) => {
-    Alert.alert(
-      "Excluir Venda",
-      "Você tem certeza que deseja excluir esta venda?",
-      [
-        { text: "Não" },
-        {
-          text: "Sim",
-          onPress: () => {
-            setVendas((prevVendas) =>
-              prevVendas.filter((venda) => venda.numPedido !== numPedido)
-            );
-          },
+    Alert.alert("Excluir Venda", "Deseja realmente excluir esta venda?", [
+      { text: "Não" },
+      {
+        text: "Sim",
+        onPress: () => {
+          const novasVendas = vendas.filter(
+            (venda) => venda.numPedido !== numPedido
+          );
+          setVendas(novasVendas);
+          saveVendas(novasVendas);
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleEditVenda = (venda: IVenda) => {
@@ -96,12 +114,34 @@ export default function VendaModal() {
     setVisible(true);
   };
 
+  const handleUpdateVenda = async () => {
+    if (!editVenda) return;
+
+    const updatedVenda: IVenda = {
+      ...editVenda,
+      nome: nomeCliente,
+      produto,
+      valor: parseFloat(valorTotal),
+    };
+
+    const novasVendas = vendas.map((venda) =>
+      venda.numPedido === editVenda.numPedido ? updatedVenda : venda
+    );
+
+    setVendas(novasVendas);
+    saveVendas(novasVendas);
+
+    setEditMode(false);
+    setEditVenda(null);
+    setNomeCliente("");
+    setProduto("");
+    setValorTotal("");
+    setVisible(false);
+  };
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.openButton}
-        onPress={() => setVisible(true)}
-      >
+      <TouchableOpacity style={styles.openButton} onPress={() => setVisible(true)}>
         <Text style={styles.openButtonText}>+</Text>
       </TouchableOpacity>
 
@@ -130,6 +170,7 @@ export default function VendaModal() {
               onChangeText={setValorTotal}
               keyboardType="numeric"
             />
+            
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.addButton}
@@ -164,6 +205,7 @@ export default function VendaModal() {
             <Text style={styles.vendaText}>
               Valor: R$ {item.valor.toFixed(2)}
             </Text>
+            <Text style={styles.vendaText}>{item.localizacao}</Text>
             <View style={styles.vendaActions}>
               <TouchableOpacity
                 onPress={() => handleEditVenda(item)}

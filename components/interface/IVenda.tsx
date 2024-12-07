@@ -3,5 +3,6 @@ export interface IVenda{
     nome: string,
     produto: string,
     data: Date,
-    valor: number
+    valor: number,
+    localizacao: string
 }

@@ -1,15 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, Alert, FlatList } from "react-native";
+import * as Location from "expo-location";
 import { IProdutos } from "@/components/interface/IProdutos";
+import AsyncStorage from "@react-native-async-storage/async-storage"; 
 
 export default function ProdutoModal() {
   const [visible, setVisible] = useState(false);
   const [nome, setNome] = useState("");
   const [marca, setMarca] = useState('');
-  const [preco, setPreco] = useState(0);
+  const [preco, setPreco] = useState<number>(0);
   const [descricao, setDescricao] = useState("");
   const [produtos, setProdutos] = useState<IProdutos[]>([]);
-  const [Index, setIndex] = useState<number | null>(null);
+  const [index, setIndex] = useState<number | null>(null);
+  const [localizacao, setLocalizacao] = useState<string>(''); 
+
+  
+  const obterLocalizacao = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Permissão negada", "Para acessar sua localização, a permissão é necessária.");
+      return;
+    }
+    let location = await Location.getCurrentPositionAsync({});
+    const { latitude, longitude } = location.coords;
+    setLocalizacao(`Latitude: ${latitude}, Longitude: ${longitude}`);
+  };
+
+  
+  const loadProdutos = async () => {
+    try {
+      const savedProdutos = await AsyncStorage.getItem('produtos');
+      if (savedProdutos) {
+        setProdutos(JSON.parse(savedProdutos));
+      }
+    } catch (error) {
+      console.log("Erro ao carregar produtos:", error);
+    }
+  };
+
+  
+  const saveProdutos = async (produtos: IProdutos[]) => {
+    try {
+      await AsyncStorage.setItem('produtos', JSON.stringify(produtos));
+    } catch (error) {
+      console.log("Erro ao salvar produtos:", error);
+    }
+  };
 
   const handleAddOrUpdate = () => {
     if (nome.trim() === "" || descricao.trim() === "") {
@@ -22,32 +58,33 @@ export default function ProdutoModal() {
       descricao,
       marca,
       preco,
+      localizacao,
     };
 
-    if (Index !== null) {
-      
-      Update(Index, novoProduto);
+    let updatedProdutos = [...produtos];
+    if (index !== null) {
+      updatedProdutos[index] = novoProduto;
     } else {
-      
-      setProdutos([...produtos, novoProduto]);
+      updatedProdutos.push(novoProduto);
     }
 
-    
+    setProdutos(updatedProdutos);
+    saveProdutos(updatedProdutos); 
+    resetForm();
+  };
+
+  const resetForm = () => {
     setNome("");
     setDescricao("");
     setMarca("");
     setPreco(0);
+    setLocalizacao('');
     setVisible(false);
     setIndex(null);
   };
 
   const handleCancel = () => {
-    setNome("");
-    setDescricao("");
-    setMarca("");
-    setPreco(0);
-    setVisible(false);
-    setIndex(null);
+    resetForm();
   };
 
   const handleDeleteProduto = (index: number) => {
@@ -59,18 +96,13 @@ export default function ProdutoModal() {
         {
           text: "Sim",
           onPress: () => {
-            setProdutos((prevProdutos) => prevProdutos.filter((_, i) => i !== index));
-            
+            const updatedProdutos = produtos.filter((_, i) => i !== index);
+            setProdutos(updatedProdutos);
+            saveProdutos(updatedProdutos); 
           },
         },
       ]
     );
-  };
-  
-  const Update = (index: number, updatedProduto: IProdutos) => {
-    const atualizar = [...produtos];
-    atualizar[index] = updatedProduto; 
-    setProdutos(atualizar);
   };
 
   const handleEdit = (index: number) => {
@@ -79,9 +111,20 @@ export default function ProdutoModal() {
     setDescricao(produto.descricao);
     setMarca(produto.marca);
     setPreco(produto.preco);
+    setLocalizacao(produto.localizacao);
     setVisible(true);
     setIndex(index);
   };
+
+  useEffect(() => {
+    loadProdutos(); 
+  }, []);
+
+  useEffect(() => {
+    if (visible) {
+      obterLocalizacao();
+    }
+  }, [visible]);
 
   return (
     <View style={styles.container}>
@@ -101,14 +144,14 @@ export default function ProdutoModal() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {Index !== null ? "Editar Produto" : "Adicionar Produto"}
+              {index !== null ? "Editar Produto" : "Adicionar Produto"}
             </Text>
 
             <TextInput
               style={styles.textInput}
               placeholder="Nome do Produto"
               value={nome}
-              onChangeText={(text) => setNome(text)}
+              onChangeText={setNome}
               autoFocus
             />
 
@@ -116,13 +159,13 @@ export default function ProdutoModal() {
               style={styles.textInput}
               placeholder="Descrição"
               value={descricao}
-              onChangeText={(text) => setDescricao(text)}
+              onChangeText={setDescricao}
             />
             <TextInput
               style={styles.textInput}
               placeholder="Marca"
               value={marca}
-              onChangeText={(text) => setMarca(text)}
+              onChangeText={setMarca}
             />
             <TextInput
               style={styles.textInput}
@@ -132,12 +175,12 @@ export default function ProdutoModal() {
                 const parsedPrice = parseFloat(text);
                 if (!isNaN(parsedPrice)) {
                   setPreco(parsedPrice);
-                } else {
-                  setPreco(0);
                 }
               }}
               keyboardType="numeric"
             />
+            
+            <Text style={styles.textInput}>Localização: {localizacao}</Text>
 
             <View style={styles.buttonRow}>
               <TouchableOpacity
@@ -145,7 +188,7 @@ export default function ProdutoModal() {
                 onPress={handleAddOrUpdate}
               >
                 <Text style={styles.buttonText}>
-                  {Index !== null ? "Atualizar" : "Adicionar"}
+                  {index !== null ? "Atualizar" : "Adicionar"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -160,33 +203,33 @@ export default function ProdutoModal() {
       </Modal>
 
       <FlatList
-  style={styles.listContainer}
-  data={produtos}
-  keyExtractor={(item, index) => index.toString()}
-  renderItem={({ item, index }) => (
-    <View style={styles.personContainer}>
-      <Text style={styles.personName}>{item.nome}</Text>
-      <Text style={styles.personDescription}>{item.descricao}</Text>
-      <Text style={styles.personDescription}>Marca: {item.marca}</Text>
-      <Text style={styles.personDescription}>Preço: R${item.preco}</Text>
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => handleDeleteProduto(index)}
-        >
-          <Text style={styles.deleteButtonText}>Excluir</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => handleEdit(index)}
-        >
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  )}
-/>
-
+        style={styles.listContainer}
+        data={produtos}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item, index }) => (
+          <View style={styles.personContainer}>
+            <Text style={styles.personName}>{item.nome}</Text>
+            <Text style={styles.personDescription}>{item.descricao}</Text>
+            <Text style={styles.personDescription}>Marca: {item.marca}</Text>
+            <Text style={styles.personDescription}>Preço: R${item.preco}</Text>
+            <Text style={styles.personDescription}>Localização: {item.localizacao}</Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteProduto(index)}
+              >
+                <Text style={styles.deleteButtonText}>Excluir</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handleEdit(index)}
+              >
+                <Text style={styles.editButtonText}>Editar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
     </View>
   );
 }
