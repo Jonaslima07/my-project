@@ -1,8 +1,9 @@
 export interface IProdutos {
     nome: string;
     descricao: string;
-    marca: string;
     preco: number;
-    localizacao: string
+    localizacao: string;
+    numProduto: number;
+    valor: number;
+    marca: string;
 };
-  
