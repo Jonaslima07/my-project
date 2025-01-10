@@ -1,10 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, FlatList, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  Alert,
+} from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IVenda } from "../interface/IVenda";
 
-
+interface IVenda {
+  numPedido: number;
+  nome: string;
+  produto: string;
+  valor: number;
+  data: Date;
+  localizacao?: string;
+}
 
 export default function VendaModal() {
   const [visible, setVisible] = useState(false);
@@ -15,27 +30,29 @@ export default function VendaModal() {
   const [numPedido, setNumPedido] = useState(1);
   const [editMode, setEditMode] = useState(false);
   const [editVenda, setEditVenda] = useState<IVenda | null>(null);
-  const [localizacao, setLocalizacao] = useState("");
+  const [localizacao, setLocalizacao] = useState<string>("");
 
   useEffect(() => {
     loadVendas();
+    getLocation();
   }, []);
 
-  const obterLocalizacao = async () => {
+  const getLocation = async () => {
     try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
           "Permissão negada",
-          "Para acessar sua localização, a permissão é necessária."
+          "Não foi possível acessar sua localização."
         );
         return;
       }
-      let location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
+
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
       setLocalizacao(`Latitude: ${latitude}, Longitude: ${longitude}`);
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível obter a localização.");
+      Alert.alert("Erro", "Não foi possível obter sua localização.");
     }
   };
 
@@ -43,9 +60,10 @@ export default function VendaModal() {
     try {
       const savedVendas = await AsyncStorage.getItem("vendas");
       if (savedVendas) {
-        setVendas(JSON.parse(savedVendas));
+        const vendasParsed: IVenda[] = JSON.parse(savedVendas);
+        setVendas(vendasParsed);
         const maxNumPedido = Math.max(
-          ...JSON.parse(savedVendas).map((venda: IVenda) => venda.numPedido),
+          ...vendasParsed.map((venda) => venda.numPedido),
           0
         );
         setNumPedido(maxNumPedido + 1);
@@ -90,19 +108,20 @@ export default function VendaModal() {
   };
 
   const handleDeleteVenda = (numPedido: number) => {
-    Alert.alert("Excluir Venda", "Deseja realmente excluir esta venda?", [
-      { text: "Não" },
-      {
-        text: "Sim",
-        onPress: () => {
-          const novasVendas = vendas.filter(
-            (venda) => venda.numPedido !== numPedido
-          );
-          setVendas(novasVendas);
-          saveVendas(novasVendas);
-        },
-      },
-    ]);
+    const novasVendas = vendas.filter((venda) => venda.numPedido !== numPedido);
+
+    setVendas(novasVendas);
+    saveVendas(novasVendas);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setNomeCliente("");
+    setProduto("");
+    setValorTotal("");
+    setEditMode(false);
+    setEditVenda(null);
+    setVisible(false);
   };
 
   const handleEditVenda = (venda: IVenda) => {
@@ -131,18 +150,16 @@ export default function VendaModal() {
     setVendas(novasVendas);
     saveVendas(novasVendas);
 
-    setEditMode(false);
-    setEditVenda(null);
-    setNomeCliente("");
-    setProduto("");
-    setValorTotal("");
-    setVisible(false);
+    resetForm();
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.openButton} onPress={() => setVisible(true)}>
-        <Text style={styles.openButtonText}>+</Text>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setVisible(true)}
+      >
+        <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
 
       <Modal visible={visible} animationType="slide" transparent>
@@ -170,10 +187,10 @@ export default function VendaModal() {
               onChangeText={setValorTotal}
               keyboardType="numeric"
             />
-            
-            <View style={styles.modalButtons}>
+
+            <View style={styles.buttonRow}>
               <TouchableOpacity
-                style={styles.addButton}
+                style={styles.saveButtonModal}
                 onPress={editMode ? handleUpdateVenda : handleAddVenda}
               >
                 <Text style={styles.addButtonText}>
@@ -181,10 +198,10 @@ export default function VendaModal() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setVisible(false)}
+                style={styles.cancelButtonModal}
+                onPress={resetForm}
               >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -195,18 +212,22 @@ export default function VendaModal() {
         data={vendas}
         keyExtractor={(item) => item.numPedido.toString()}
         renderItem={({ item }) => (
-          <View style={styles.vendaItem}>
-            <Text style={styles.vendaText}>Pedido #{item.numPedido}</Text>
-            <Text style={styles.vendaText}>Cliente: {item.nome}</Text>
-            <Text style={styles.vendaText}>Produto: {item.produto}</Text>
-            <Text style={styles.vendaText}>
+          <View style={styles.personContainer}>
+            <Text style={styles.personDescription}>
+              Pedido #{item.numPedido}
+            </Text>
+            <Text style={styles.personDescription}>Cliente: {item.nome}</Text>
+            <Text style={styles.personDescription}>
+              Produto: {item.produto}
+            </Text>
+            <Text style={styles.personDescription}>
               Data: {new Date(item.data).toLocaleDateString()}
             </Text>
-            <Text style={styles.vendaText}>
+            <Text style={styles.personDescription}>
               Valor: R$ {item.valor.toFixed(2)}
             </Text>
-            <Text style={styles.vendaText}>{item.localizacao}</Text>
-            <View style={styles.vendaActions}>
+            <Text style={styles.personDescription}>{item.localizacao}</Text>
+            <View style={styles.buttonRow}>
               <TouchableOpacity
                 onPress={() => handleEditVenda(item)}
                 style={styles.editButton}
@@ -222,6 +243,9 @@ export default function VendaModal() {
             </View>
           </View>
         )}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.cardContainer}
       />
     </View>
   );
@@ -229,130 +253,132 @@ export default function VendaModal() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#F5F5F5",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ccc",
+    padding: 0,
   },
-  openButton: {
+  addButton: {
     backgroundColor: "#4CAF50",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    bottom: 10,
+    left: 150,
+    borderRadius: 100,
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    alignSelf: "flex-end",
-    marginBottom: 20,
+    marginBottom: 15,
+    marginTop: 15,
   },
-  openButtonText: {
-    color: "#FFF",
-    fontSize: 30,
+  addButtonText: {
+    color: "#fff",
+    fontSize: 25,
     fontWeight: "bold",
+  },
+  saveButtonModal: {
+    backgroundColor: "#2196F3",
+    padding: 5,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 0,
+    alignItems: "center",
+    
+  },
+  textInput: {
+    width: "100%",
+    height: 45,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+    fontSize: 16,
+    color: "#333",
   },
   modalOverlay: {
     flex: 1,
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
   },
   modalContent: {
     width: "80%",
-    backgroundColor: "#FFF",
+    backgroundColor: "#fff",
     borderRadius: 10,
-    padding: 20,
+    padding: 10,
     alignItems: "center",
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 20,
+    color: "#333",
+    marginBottom: 30,
   },
-  textInput: {
-    width: "100%",
-    height: 45,
-    borderColor: "#CCC",
+  cancelButtonModal: {
+    backgroundColor: "#f44336",
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  cardContainer: {
+    alignItems: "center",
+    paddingTop: 20,
+    marginBottom: 555,
+  },
+  personContainer: {
+    backgroundColor: "#fff",
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 15,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    color: "#333",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  addButton: {
-    backgroundColor: "#4CAF50",
-    padding: 12,
-    borderRadius: 5,
-    flex: 1,
-    marginRight: 5,
-    alignItems: "center",
-  },
-  addButtonText: {
-    color: "#FFF",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  cancelButton: {
-    backgroundColor: "#F44336",
-    padding: 12,
-    borderRadius: 5,
-    flex: 1,
-    marginLeft: 5,
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    color: "#FFF",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  vendaItem: {
-    padding: 15,
-    backgroundColor: "#FFF",
-    marginVertical: 10,
-    borderRadius: 5,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  vendaText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  vendaActions: {
-    flexDirection: "row",
-    justifyContent: "center", 
-    alignItems: "center",          
+    borderColor: "#333",
+    elevation: 1,
+    width: "80%",
+    position: "relative",
     marginTop: 10,
-    left: 100
+  },
+  personDescription: {
+    fontSize: 14,
+    color: "#555",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 5,
+  },
+  deleteButton: {
+    backgroundColor: "#f44336",
+    paddingVertical: 8,
+    borderRadius: 50,
+    alignItems: "center",
+    width: "30%",
   },
   editButton: {
     backgroundColor: "blue",
-    padding: 10,
+    paddingVertical: 8,
     borderRadius: 50,
     alignItems: "center",
-    marginRight: 15, 
-    left: 5,
+    width: "30%",
   },
-  deleteButton: {
-    
-    backgroundColor: "#F44336",
-    padding: 10,
-    borderRadius: 50,
-    alignItems: "center",
-    marginLeft: 5, 
-  },
-  editButtonText: {
-    color: "#FFF",
+  deleteButtonText: {
+    color: "#fff",
+    fontSize: 14,
     fontWeight: "bold",
   },
-
-  deleteButtonText: {
-    color: "#FFF",
+  editButtonText: {
+    color: "#fff",
+    fontSize: 14,
     fontWeight: "bold",
   },
 });
