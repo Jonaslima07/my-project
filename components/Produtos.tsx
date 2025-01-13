@@ -45,8 +45,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 1, 
-    marginBottom: 1
+    paddingTop: 30, 
+    marginBottom: 0
   },
   
   header: {
@@ -56,6 +56,8 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     paddingHorizontal: 10, 
+    paddingTop: 5,
+   
   },
   carouselContainer: {
     paddingVertical: 50, 

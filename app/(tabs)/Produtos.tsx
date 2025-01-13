@@ -2,15 +2,15 @@ import { ScrollView, SafeAreaView, StyleSheet } from 'react-native';
 import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import VendasDentails from '../screen/VendasDetails';
+import ProdutosDetails from '../screen/ProdutosDetails';
 
 
-export default function Vendas() {
+export default function Produtos() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <Header />
-        <VendasDentails />
+        <ProdutosDetails />
       </ScrollView>
       <Footer />
     </SafeAreaView>
