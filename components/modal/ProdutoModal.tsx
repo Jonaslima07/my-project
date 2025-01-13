@@ -71,9 +71,13 @@ export default function ProdutoModal() {
       Alert.alert("Erro", "Preencha todos os campos corretamente.");
       return;
     }
-
+  
+   
+    const produtoCounter = await AsyncStorage.getItem("produto_counter");
+    const nextNumProduto = produtoCounter ? parseInt(produtoCounter) + 1 : 1;
+  
     const novoProduto: IProdutos = {
-      numProduto,
+      numProduto: nextNumProduto,
       nome: nomeProduto,
       marca,
       descricao,
@@ -83,14 +87,17 @@ export default function ProdutoModal() {
         ? `${location.latitude}, ${location.longitude}`
         : "Não disponível",
     };
-
+  
     const novosProdutos = [...produtos, novoProduto];
     setProdutos(novosProdutos);
-    setNumProduto(numProduto + 1);
     saveProdutos(novosProdutos);
-
+  
+    
+    await AsyncStorage.setItem("produto_counter", nextNumProduto.toString());
+  
     resetForm();
   };
+  
 
   const handleDeleteProduto = (numProduto: number) => {
     const novosProdutos = produtos.filter(
