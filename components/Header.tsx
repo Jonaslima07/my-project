@@ -22,7 +22,8 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start", 
     alignItems: "center",
     backgroundColor: "green",
-    height: 110,
+    width: "100%",
+    height: 120,
   },
   image: {
     width: 120,
@@ -37,6 +38,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     color: "#fff",
     fontSize: 28,
+    marginTop: 20,
   },
   textContainer: {
     alignItems: "center"

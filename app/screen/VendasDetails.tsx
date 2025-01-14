@@ -5,7 +5,7 @@ import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { IVenda } from "@/components/interface/IVenda";
 
-export default function VendaModal() {
+export default function VendaDetails() {
   const [visible, setVisible] = useState(false);
   const [nomeCliente, setNomeCliente] = useState("");
   const [produto, setProduto] = useState("");
@@ -241,6 +241,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ccc",
     paddingTop: 15,
+    
   },
   addButton: {
     backgroundColor: "#4CAF50",

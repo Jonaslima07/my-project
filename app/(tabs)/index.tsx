@@ -2,7 +2,8 @@ import { ScrollView, SafeAreaView, StyleSheet } from 'react-native';
 import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import Produtos from '@/components/Produtos';
+import Body from '@/components/Body';
+
 
 
 export default function AppScreen() {
@@ -10,7 +11,7 @@ export default function AppScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <Header />
-        <Produtos />
+        <Body />
       </ScrollView>
       <Footer />
     </SafeAreaView>

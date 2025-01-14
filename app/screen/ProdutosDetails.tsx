@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, Modal, TextInput, FlatList, Alert, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,10 +12,7 @@ export default function ProdutoModal() {
   const [valor, setValor] = useState("");
   const [produtos, setProdutos] = useState<IProdutos[]>([]);
   const [numProduto, setNumProduto] = useState(1);
-  const [editMode, setEditMode] = useState(false);
-  const [editProduto, setEditProduto] = useState<IProdutos | null>(null);
-  const [location, setLocation] =
-    useState<Location.LocationObjectCoords | null>(null);
+  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
 
   useEffect(() => {
     loadProdutos();
@@ -62,21 +58,14 @@ export default function ProdutoModal() {
   };
 
   const handleAddProduto = async () => {
-    if (
-      !nomeProduto ||
-      !descricao ||
-      !marca ||
-      isNaN(parseFloat(valor)) ||
-      parseFloat(valor) <= 0
-    ) {
+    if (!nomeProduto || !descricao || !marca || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
       Alert.alert("Erro", "Preencha todos os campos corretamente.");
       return;
     }
-  
-   
+
     const produtoCounter = await AsyncStorage.getItem("produto_counter");
     const nextNumProduto = produtoCounter ? parseInt(produtoCounter) + 1 : 1;
-  
+
     const novoProduto: IProdutos = {
       numProduto: nextNumProduto,
       nome: nomeProduto,
@@ -87,25 +76,15 @@ export default function ProdutoModal() {
       localizacao: location
         ? `${location.latitude}, ${location.longitude}`
         : "Não disponível",
+      id: 0
     };
-  
+
     const novosProdutos = [...produtos, novoProduto];
     setProdutos(novosProdutos);
     saveProdutos(novosProdutos);
-  
-    
-    await AsyncStorage.setItem("produto_counter", nextNumProduto.toString());
-  
-    resetForm();
-  };
-  
 
-  const handleDeleteProduto = (numProduto: number) => {
-    const novosProdutos = produtos.filter(
-      (produto) => produto.numProduto !== numProduto
-    );
-    setProdutos(novosProdutos);
-    saveProdutos(novosProdutos);
+    await AsyncStorage.setItem("produto_counter", nextNumProduto.toString());
+
     resetForm();
   };
 
@@ -114,57 +93,19 @@ export default function ProdutoModal() {
     setMarca("");
     setDescricao("");
     setValor("");
-    setEditMode(false);
-    setEditProduto(null);
     setVisible(false);
-  };
-
-  const handleEditProduto = (produto: IProdutos) => {
-    setEditMode(true);
-    setEditProduto(produto);
-    setNomeProduto(produto.nome);
-    setMarca(produto.marca);
-    setDescricao(produto.descricao);
-    setValor(produto.valor.toString());
-    setVisible(true);
-  };
-
-  const handleUpdateProduto = async () => {
-    if (!editProduto) return;
-
-    const updatedProduto: IProdutos = {
-      ...editProduto,
-      nome: nomeProduto,
-      marca,
-      descricao,
-      valor: parseFloat(valor),
-    };
-
-    const novosProdutos = produtos.map((produto) =>
-      produto.numProduto === editProduto.numProduto ? updatedProduto : produto
-    );
-
-    setProdutos(novosProdutos);
-    saveProdutos(novosProdutos);
-
-    resetForm();
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setVisible(true)}
-      >
+      <TouchableOpacity style={styles.addButton} onPress={() => setVisible(true)}>
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
 
       <Modal visible={visible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {editMode ? "Editar Produto" : "Novo Produto"}
-            </Text>
+            <Text style={styles.modalTitle}>Novo Produto</Text>
             <TextInput
               style={styles.textInput}
               placeholder="Nome do Produto"
@@ -192,18 +133,10 @@ export default function ProdutoModal() {
             />
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={styles.saveButtonModal}
-                onPress={editMode ? handleUpdateProduto : handleAddProduto}
-              >
-                <Text style={styles.buttonText}>
-                  {editMode ? "Atualizar" : "Salvar"}
-                </Text>
+              <TouchableOpacity style={styles.saveButtonModal} onPress={handleAddProduto}>
+                <Text style={styles.buttonText}>Salvar</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelButtonModal}
-                onPress={resetForm}
-              >
+              <TouchableOpacity style={styles.cancelButtonModal} onPress={resetForm}>
                 <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
             </View>
@@ -216,37 +149,14 @@ export default function ProdutoModal() {
         keyExtractor={(item) => item.numProduto.toString()}
         renderItem={({ item }) => (
           <View style={styles.personContainer}>
-            <Text style={styles.personDescription}>
-              Produto #{item.numProduto}
-            </Text>
+            <Text style={styles.personDescription}>Produto #{item.numProduto}</Text>
             <Text style={styles.personDescription}>Nome: {item.nome}</Text>
             <Text style={styles.personDescription}>Marca: {item.marca}</Text>
+            <Text style={styles.personDescription}>Descrição: {item.descricao}</Text>
             <Text style={styles.personDescription}>
-              Descrição: {item.descricao}
+              Valor: R${item.valor && !isNaN(item.valor) ? item.valor.toFixed(2) : "Valor inválido"}
             </Text>
-            <Text style={styles.personDescription}>
-              Valor: R${" "}
-              {item.valor && !isNaN(item.valor)
-                ? item.valor.toFixed(2)
-                : "Valor inválido"}
-            </Text>
-            <Text style={styles.personDescription}>
-              Localização: {item.localizacao}
-            </Text>
-            <View style={styles.buttonRow}>
-              <TouchableOpacity
-                onPress={() => handleEditProduto(item)}
-                style={styles.editButton}
-              >
-                <Text style={styles.editButtonText}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDeleteProduto(item.numProduto)}
-                style={styles.deleteButton}
-              >
-                <Text style={styles.deleteButtonText}>Excluir</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.personDescription}>Localização: {item.localizacao}</Text>
           </View>
         )}
         horizontal
@@ -257,13 +167,14 @@ export default function ProdutoModal() {
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#ccc",
     paddingTop: 15,
-    flex:1,
+    flex: 1,
   },
   addButton: {
     backgroundColor: "#4CAF50",
@@ -289,6 +200,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     flex: 1,
     marginRight: 0,
+    alignItems: "center",
+  },
+  cancelButtonModal: {
+    backgroundColor: "#f44336",
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
     alignItems: "center",
   },
   textInput: {
@@ -322,13 +241,10 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 30,
   },
-  cancelButtonModal: {
-    backgroundColor: "#f44336",
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 10,
-    alignItems: "center",
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
   buttonText: {
     color: "#fff",
@@ -337,7 +253,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     alignItems: "center",
-    paddingTop:0, 
+    paddingTop: 0,
   },
   personContainer: {
     backgroundColor: "#fff",
@@ -354,36 +270,5 @@ const styles = StyleSheet.create({
   personDescription: {
     fontSize: 14,
     color: "#555",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 5,
-  },
-  deleteButton: {
-    backgroundColor: "#f44336",
-    paddingVertical: 8,
-    borderRadius: 50,
-    alignItems: "center",
-    width: "30%",
-  },
-  editButton: {
-    backgroundColor: "blue",
-    paddingVertical: 8,
-    borderRadius: 50,
-    alignItems: "center",
-    width: "30%",
-  },
-  deleteButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  editButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
   },
 });
