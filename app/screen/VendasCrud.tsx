@@ -3,41 +3,40 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, FlatList, A
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { IVenda } from "@/components/interface/IVenda";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 
-export default function VendasList() {
+export default function VendasCrud() {
   const [visible, setVisible] = useState(false);
   const [nomeCliente, setNomeCliente] = useState("");
   const [produto, setProduto] = useState("");
   const [valorTotal, setValorTotal] = useState("");
   const [vendas, setVendas] = useState<IVenda[]>([]);
   const [numPedido, setNumPedido] = useState(1);
+  const [editMode, setEditMode] = useState(false);
+  const [editVenda, setEditVenda] = useState<IVenda | null>(null);
   const [localizacao, setLocalizacao] = useState<string>("");
 
   useEffect(() => {
     loadVendas();
+    getLocation();
   }, []);
 
-  useEffect(() => {
-    if (visible) {
-      requestLocation();
-    }
-  }, [visible]);
+  const getLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permissão negada",
+          "Não foi possível acessar sua localização."
+        );
+        return;
+      }
 
-  const requestLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permissão negada",
-        "Não foi possível acessar sua localização."
-      );
-      return;
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+      setLocalizacao(`Latitude: ${latitude}, Longitude: ${longitude}`);
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível obter sua localização.");
     }
-
-    const currentLocation = await Location.getCurrentPositionAsync({});
-    const { latitude, longitude } = currentLocation.coords;
-    setLocalizacao(`Latitude: ${latitude}, Longitude: ${longitude}`);
   };
 
   const loadVendas = async () => {
@@ -91,17 +90,68 @@ export default function VendasList() {
     setVisible(false);
   };
 
+  const handleDeleteVenda = (numPedido: number) => {
+    const novasVendas = vendas.filter((venda) => venda.numPedido !== numPedido);
+
+    setVendas(novasVendas);
+    saveVendas(novasVendas);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setNomeCliente("");
+    setProduto("");
+    setValorTotal("");
+    setEditMode(false);
+    setEditVenda(null);
+    setVisible(false);
+  };
+
+  const handleEditVenda = (venda: IVenda) => {
+    setEditMode(true);
+    setEditVenda(venda);
+    setNomeCliente(venda.nome);
+    setProduto(venda.produto);
+    setValorTotal(venda.valor.toString());
+    setVisible(true);
+  };
+
+  const handleUpdateVenda = async () => {
+    if (!editVenda) return;
+
+    const updatedVenda: IVenda = {
+      ...editVenda,
+      nome: nomeCliente,
+      produto,
+      valor: parseFloat(valorTotal),
+    };
+
+    const novasVendas = vendas.map((venda) =>
+      venda.numPedido === editVenda.numPedido ? updatedVenda : venda
+    );
+
+    setVendas(novasVendas);
+    saveVendas(novasVendas);
+
+    resetForm();
+  };
+
   return (
     <View style={styles.container}>
-      <Header />
-      <TouchableOpacity style={styles.addButton} onPress={() => setVisible(true)}>
+      
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setVisible(true)}
+      >
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
 
       <Modal visible={visible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Nova Venda</Text>
+            <Text style={styles.modalTitle}>
+              {editMode ? "Editar Venda" : "Nova Venda"}
+            </Text>
             <TextInput
               style={styles.textInput}
               placeholder="Nome do Cliente"
@@ -123,10 +173,18 @@ export default function VendasList() {
             />
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.saveButtonModal} onPress={handleAddVenda}>
-                <Text style={styles.addButtonText}>Salvar</Text>
+              <TouchableOpacity
+                style={styles.saveButtonModal}
+                onPress={editMode ? handleUpdateVenda : handleAddVenda}
+              >
+                <Text style={styles.addButtonText}>
+                  {editMode ? "Atualizar" : "Salvar"}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelButtonModal} onPress={() => setVisible(false)}>
+              <TouchableOpacity
+                style={styles.cancelButtonModal}
+                onPress={resetForm}
+              >
                 <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
             </View>
@@ -139,19 +197,41 @@ export default function VendasList() {
         keyExtractor={(item) => item.numPedido.toString()}
         renderItem={({ item }) => (
           <View style={styles.personContainer}>
-            <Text style={styles.personDescription}>Pedido #{item.numPedido}</Text>
+            <Text style={styles.personDescription}>
+              Pedido #{item.numPedido}
+            </Text>
             <Text style={styles.personDescription}>Cliente: {item.nome}</Text>
-            <Text style={styles.personDescription}>Produto: {item.produto}</Text>
-            <Text style={styles.personDescription}>Data: {new Date(item.data).toLocaleDateString()}</Text>
-            <Text style={styles.personDescription}>Valor: R$ {item.valor.toFixed(2)}</Text>
+            <Text style={styles.personDescription}>
+              Produto: {item.produto}
+            </Text>
+            <Text style={styles.personDescription}>
+              Data: {new Date(item.data).toLocaleDateString()}
+            </Text>
+            <Text style={styles.personDescription}>
+              Valor: R$ {item.valor.toFixed(2)}
+            </Text>
             <Text style={styles.personDescription}>{item.localizacao}</Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                onPress={() => handleEditVenda(item)}
+                style={styles.editButton}
+              >
+                <Text style={styles.editButtonText}>Editar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDeleteVenda(item.numPedido)}
+                style={styles.deleteButton}
+              >
+                <Text style={styles.deleteButtonText}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cardContainer}
       />
-      <Footer />
+      
     </View>
   );
 }
@@ -162,7 +242,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ccc",
     paddingTop: 15,
-    flex: 1,
+    flex:1,
   },
   addButton: {
     backgroundColor: "#4CAF50",
@@ -175,27 +255,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 5,
     marginBottom: 15,
-    marginTop: 15,
+    marginTop: 30,
   },
   addButtonText: {
     color: "#fff",
-    fontSize: 30,
+    fontSize: 25,
     fontWeight: "bold",
   },
   saveButtonModal: {
     backgroundColor: "#2196F3",
-    padding: 12,
+    padding: 5,
     borderRadius: 8,
     flex: 1,
     marginRight: 0,
-    alignItems: "center",
-  },
-  cancelButtonModal: {
-    backgroundColor: "#f44336",
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 10,
     alignItems: "center",
   },
   textInput: {
@@ -229,34 +301,69 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 30,
   },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
+  cancelButtonModal: {
+    backgroundColor: "#f44336",
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
+    alignItems: "center",
   },
   buttonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
   },
   cardContainer: {
     alignItems: "center",
-    paddingTop: 0,
+    paddingTop: 20,
+    marginBottom: 555,
   },
   personContainer: {
     backgroundColor: "#fff",
     padding: 10,
-    marginBottom: 200,
+    marginBottom: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#333",
     elevation: 1,
-    width: 300,
-    position: "fixed",
-    marginTop: 0,
+    width: "80%",
+    position: "relative",
+    marginTop: 10,
   },
   personDescription: {
     fontSize: 14,
     color: "#555",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 5,
+  },
+  deleteButton: {
+    backgroundColor: "#f44336",
+    paddingVertical: 8,
+    borderRadius: 50,
+    alignItems: "center",
+    width: "30%",
+  },
+  editButton: {
+    backgroundColor: "blue",
+    paddingVertical: 8,
+    borderRadius: 50,
+    alignItems: "center",
+    width: "30%",
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  editButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });

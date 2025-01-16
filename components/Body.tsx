@@ -13,13 +13,18 @@ const Body = () => {
   return (
     <SafeAreaView style={styles.container}>
       
-      <Text style={styles.header}>
+    <Text style={styles.header}>
       Nossa loja nasceu com o propósito de oferecer o melhor da tecnologia aos nossos clientes.
       Desde a era dos primeiros celulares até os smartphones de última geração, acompanhamos de perto a evolução tecnológica.  
       Com uma trajetória marcada pela inovação, buscamos sempre oferecer produtos de alta qualidade e das marcas mais renomadas do mercado.{'\n'} 
-      Confira nosso catálogo disponível
-      São dos mais variados e maiores marcas do mercado, venha conferir!
+      Confira nosso catálogo disponível, são dos mais variados e maiores marcas do mercado, venha conferir!
       </Text>
+      
+      <Image
+        source={require('@/assets/images/vendedor.png')} 
+        style={styles.imageUrl}
+      /> 
+      
       
       <FlatList
         data={carrossel}
@@ -36,17 +41,18 @@ const Body = () => {
         contentContainerStyle={styles.carouselContainer}
       />
     </SafeAreaView>
+    
+    
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 30, 
-    marginBottom: 0
+    paddingTop: 50, 
+  
   },
   
   header: {
@@ -56,23 +62,32 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     paddingHorizontal: 10, 
-    paddingTop: 5,
+    paddingTop: 8,
    
   },
   carouselContainer: {
-    paddingVertical: 50, 
+    paddingVertical: 100, 
   },
   carouselItem: {
     width: 411,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 0,
+    
   },
   image: {
     width: 260,
     height: 218,
     borderRadius: 50,
-    marginHorizontal: 0,
+    
+    
+  },
+  imageUrl:{
+    width: 180,
+    height: 150,
+    left: 100,
+    marginBottom: -50,
+    marginTop: 15,
+    
   },
   itemTitle: {
     marginTop: 10,
