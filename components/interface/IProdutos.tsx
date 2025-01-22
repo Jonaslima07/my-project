@@ -4,7 +4,6 @@ export interface IProdutos {
     descricao: string;
     preco: number;
     localizacao: string;
-    numProduto: number;
     valor: number;
     marca: string;
 };

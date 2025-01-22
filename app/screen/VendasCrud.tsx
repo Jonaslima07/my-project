@@ -1,59 +1,69 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, FlatList, Alert } from "react-native";
-import * as Location from "expo-location";
+import React, { useEffect, useState } from "react"; 
+import { View, Text, TouchableOpacity, Modal, TextInput, FlatList, Alert, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
 import { IVenda } from "@/components/interface/IVenda";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 export default function VendasCrud() {
   const [visible, setVisible] = useState(false);
-  const [nomeCliente, setNomeCliente] = useState("");
+  const [cliente, setCliente] = useState("");
   const [produto, setProduto] = useState("");
-  const [valorTotal, setValorTotal] = useState("");
+  const [quantidade, setQuantidade] = useState("");
+  const [valor, setValor] = useState("");
   const [vendas, setVendas] = useState<IVenda[]>([]);
-  const [numPedido, setNumPedido] = useState(1);
-  const [editMode, setEditMode] = useState(false);
-  const [editVenda, setEditVenda] = useState<IVenda | null>(null);
-  const [localizacao, setLocalizacao] = useState<string>("");
+  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     loadVendas();
-    getLocation();
   }, []);
 
-  const getLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permissão negada",
-          "Não foi possível acessar sua localização."
-        );
-        return;
-      }
-
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = currentLocation.coords;
-      setLocalizacao(`Latitude: ${latitude}, Longitude: ${longitude}`);
-    } catch (error) {
-      Alert.alert("Erro", "Não foi possível obter sua localização.");
+  useEffect(() => {
+    if (visible) {
+      requestLocation();
     }
-  };
+  }, [visible]);
 
-  const loadVendas = async () => {
+  useEffect(() => {
+    if (id) {
+      loadVendas(Number(id));
+    }
+  }, [id]);
+
+  const loadVendas = async (id?: number) => {
     try {
       const savedVendas = await AsyncStorage.getItem("vendas");
       if (savedVendas) {
-        const vendasParsed: IVenda[] = JSON.parse(savedVendas);
-        setVendas(vendasParsed);
-        const maxNumPedido = Math.max(
-          ...vendasParsed.map((venda) => venda.numPedido),
-          0
-        );
-        setNumPedido(maxNumPedido + 1);
+        const vendasParsed = JSON.parse(savedVendas);
+        if (Array.isArray(vendasParsed)) {
+          if (id) {
+            const venda = vendasParsed.find((v: IVenda) => v.id === id);
+            if (venda) {
+              setVendas([venda]);
+            } else {
+              Alert.alert("Erro", "Venda não encontrada.");
+            }
+          } else {
+            setVendas(vendasParsed);
+          }
+        }
       }
     } catch (error) {
       console.log("Erro ao carregar vendas:", error);
     }
+  };
+
+  const requestLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Erro", "Permissão de localização negada.");
+      return;
+    }
+
+    const loc = await Location.getCurrentPositionAsync({});
+    setLocation(loc.coords);
   };
 
   const saveVendas = async (vendas: IVenda[]) => {
@@ -64,99 +74,95 @@ export default function VendasCrud() {
     }
   };
 
+  const handleDeleteVenda = async () => {
+    if (!id) {
+      Alert.alert("Erro", "Venda não encontrada.");
+      return;
+    }
+  
+    try {
+      const idNumber = Number(id);
+      const savedVendas = await AsyncStorage.getItem("vendas");
+      if (savedVendas) {
+        const vendasParsed = JSON.parse(savedVendas);
+        const novasVendas = vendasParsed.filter((venda: IVenda) => venda.id !== idNumber);
+  
+       
+        await AsyncStorage.setItem("vendas", JSON.stringify(novasVendas));
+  
+       
+        setVendas(novasVendas);
+  
+        Alert.alert("Sucesso", "Venda deletada com sucesso.");
+        router.push("/vendas");
+      } else {
+        Alert.alert("Erro", "Nenhuma venda encontrada para deletar.");
+      }
+    } catch (error) {
+      console.log("Erro ao deletar venda:", error);
+      Alert.alert("Erro", "Não foi possível deletar a venda.");
+    }
+  };
+  
+  
+
   const handleAddVenda = async () => {
-    if (!nomeCliente || !produto || parseFloat(valorTotal) <= 0) {
+    if (!cliente || !produto || !quantidade || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
       Alert.alert("Erro", "Preencha todos os campos corretamente.");
       return;
     }
 
     const novaVenda: IVenda = {
-      numPedido,
-      nome: nomeCliente,
+      id: vendas.length + 1,
+      nome: cliente, 
       produto,
-      data: new Date(),
-      valor: parseFloat(valorTotal),
-      localizacao,
+      quantidade: parseInt(quantidade),
+      valor: parseFloat(valor),
+      localizacao: location ? `${location.latitude}, ${location.longitude}` : "Não disponível",
+      data: new Date()
     };
 
     const novasVendas = [...vendas, novaVenda];
     setVendas(novasVendas);
-    setNumPedido(numPedido + 1);
     saveVendas(novasVendas);
 
-    setNomeCliente("");
-    setProduto("");
-    setValorTotal("");
-    setVisible(false);
-  };
-
-  const handleDeleteVenda = (numPedido: number) => {
-    const novasVendas = vendas.filter((venda) => venda.numPedido !== numPedido);
-
-    setVendas(novasVendas);
-    saveVendas(novasVendas);
     resetForm();
   };
 
   const resetForm = () => {
-    setNomeCliente("");
+    setCliente("");
     setProduto("");
-    setValorTotal("");
-    setEditMode(false);
-    setEditVenda(null);
+    setQuantidade("");
+    setValor("");
     setVisible(false);
   };
 
   const handleEditVenda = (venda: IVenda) => {
-    setEditMode(true);
-    setEditVenda(venda);
-    setNomeCliente(venda.nome);
+    setCliente(venda.nome);
     setProduto(venda.produto);
-    setValorTotal(venda.valor.toString());
+    setQuantidade(venda.quantidade.toString());
+    setValor(venda.valor.toString());
     setVisible(true);
-  };
-
-  const handleUpdateVenda = async () => {
-    if (!editVenda) return;
-
-    const updatedVenda: IVenda = {
-      ...editVenda,
-      nome: nomeCliente,
-      produto,
-      valor: parseFloat(valorTotal),
-    };
-
-    const novasVendas = vendas.map((venda) =>
-      venda.numPedido === editVenda.numPedido ? updatedVenda : venda
-    );
-
-    setVendas(novasVendas);
-    saveVendas(novasVendas);
-
-    resetForm();
   };
 
   return (
     <View style={styles.container}>
       
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setVisible(true)}
-      >
-        <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
+      {id && (
+        <TouchableOpacity style={styles.deleteButtonHeader} onPress={handleDeleteVenda}>
+          <Text style={styles.deleteButtonText}>X</Text>
+        </TouchableOpacity>
+      )}
 
       <Modal visible={visible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {editMode ? "Editar Venda" : "Nova Venda"}
-            </Text>
+            <Text style={styles.modalTitle}>Nova Venda</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Nome do Cliente"
-              value={nomeCliente}
-              onChangeText={setNomeCliente}
+              placeholder="Cliente"
+              value={cliente}
+              onChangeText={setCliente}
             />
             <TextInput
               style={styles.textInput}
@@ -166,20 +172,24 @@ export default function VendasCrud() {
             />
             <TextInput
               style={styles.textInput}
-              placeholder="Valor Total"
-              value={valorTotal}
-              onChangeText={setValorTotal}
+              placeholder="Quantidade"
+              value={quantidade}
+              onChangeText={setQuantidade}
               keyboardType="numeric"
             />
-
+            <TextInput
+              style={styles.textInput}
+              placeholder="Valor"
+              value={valor}
+              onChangeText={setValor}
+              keyboardType="numeric"
+            />
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.saveButtonModal}
-                onPress={editMode ? handleUpdateVenda : handleAddVenda}
+                onPress={handleAddVenda}
               >
-                <Text style={styles.addButtonText}>
-                  {editMode ? "Atualizar" : "Salvar"}
-                </Text>
+                <Text style={styles.buttonText}>Salvar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelButtonModal}
@@ -191,38 +201,23 @@ export default function VendasCrud() {
           </View>
         </View>
       </Modal>
-
+      
       <FlatList
         data={vendas}
-        keyExtractor={(item) => item.numPedido.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.personContainer}>
-            <Text style={styles.personDescription}>
-              Pedido #{item.numPedido}
-            </Text>
-            <Text style={styles.personDescription}>Cliente: {item.nome}</Text>
-            <Text style={styles.personDescription}>
-              Produto: {item.produto}
-            </Text>
-            <Text style={styles.personDescription}>
-              Data: {new Date(item.data).toLocaleDateString()}
-            </Text>
-            <Text style={styles.personDescription}>
-              Valor: R$ {item.valor.toFixed(2)}
-            </Text>
-            <Text style={styles.personDescription}>{item.localizacao}</Text>
+            <Text style={styles.personDescription}>Nome: {item.nome}</Text>
+            <Text style={styles.personDescription}>Produto: {item.produto}</Text>
+            <Text style={styles.personDescription}>Quantidade: {item.quantidade}</Text>
+            <Text style={styles.personDescription}>Valor: R$ {item.valor && !isNaN(item.valor) ? item.valor.toFixed(2) : "Valor inválido"}</Text>
+            <Text style={styles.personDescription}>Localização: {item.localizacao}</Text>
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 onPress={() => handleEditVenda(item)}
                 style={styles.editButton}
               >
                 <Text style={styles.editButtonText}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDeleteVenda(item.numPedido)}
-                style={styles.deleteButton}
-              >
-                <Text style={styles.deleteButtonText}>Excluir</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -231,7 +226,6 @@ export default function VendasCrud() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cardContainer}
       />
-      
     </View>
   );
 }
@@ -242,7 +236,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ccc",
     paddingTop: 15,
-    flex:1,
+    flex: 1,
+  },
+  deleteButtonHeader: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginLeft: 100,
+    left: 78,
+    width: 50,
+    marginTop: 10,
+    alignItems: 'center',
   },
   addButton: {
     backgroundColor: "#4CAF50",
@@ -259,12 +264,12 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: "#fff",
-    fontSize: 25,
+    fontSize: 30,
     fontWeight: "bold",
   },
   saveButtonModal: {
     backgroundColor: "#2196F3",
-    padding: 5,
+    padding: 12,
     borderRadius: 8,
     flex: 1,
     marginRight: 0,
@@ -311,18 +316,17 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
   },
   cardContainer: {
     alignItems: "center",
-    paddingTop: 20,
-    marginBottom: 555,
+    paddingTop: 0,
   },
   personContainer: {
     backgroundColor: "#fff",
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 160,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#333",
@@ -330,6 +334,7 @@ const styles = StyleSheet.create({
     width: "80%",
     position: "relative",
     marginTop: 10,
+    left: 65,
   },
   personDescription: {
     fontSize: 14,
@@ -355,11 +360,14 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignItems: "center",
     width: "30%",
+    
   },
   deleteButtonText: {
-    color: "#fff",
-    fontSize: 14,
+    color: "#black",
+    fontSize: 20,
     fontWeight: "bold",
+    left: 1,
+    alignItems: 'center',
   },
   editButtonText: {
     color: "#fff",

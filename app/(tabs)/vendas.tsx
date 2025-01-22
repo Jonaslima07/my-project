@@ -1,19 +1,31 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, FlatList, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  Alert,
+} from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { IVenda } from "@/components/interface/IVenda";
+import { useRouter } from "expo-router";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-export default function VendasList() {
+export default function Vendas() {
   const [visible, setVisible] = useState(false);
   const [nomeCliente, setNomeCliente] = useState("");
   const [produto, setProduto] = useState("");
   const [valorTotal, setValorTotal] = useState("");
   const [vendas, setVendas] = useState<IVenda[]>([]);
-  const [numPedido, setNumPedido] = useState(1);
+  const [quantidade, setQuantidade] = useState("");
+  const [id, setId] = useState(1);
   const [localizacao, setLocalizacao] = useState<string>("");
+  const router = useRouter();
 
   useEffect(() => {
     loadVendas();
@@ -45,56 +57,70 @@ export default function VendasList() {
       const savedVendas = await AsyncStorage.getItem("vendas");
       if (savedVendas) {
         const vendasParsed: IVenda[] = JSON.parse(savedVendas);
-        setVendas(vendasParsed);
-        const maxNumPedido = Math.max(
-          ...vendasParsed.map((venda) => venda.numPedido),
-          0
-        );
-        setNumPedido(maxNumPedido + 1);
+        console.log("Vendas carregadas:", vendasParsed);
+        if (vendasParsed.length > 0) {
+          const maxId = Math.max(...vendasParsed.map((venda) => venda.id), 0);
+          console.log("Maior ID encontrado:", maxId);
+          setId(maxId + 1);
+        }
+        setVendas(vendasParsed || []);
+      } else {
+        console.log("Nenhuma venda encontrada no AsyncStorage.");
       }
     } catch (error) {
       console.log("Erro ao carregar vendas:", error);
     }
   };
 
-  const saveVendas = async (vendas: IVenda[]) => {
-    try {
-      await AsyncStorage.setItem("vendas", JSON.stringify(vendas));
-    } catch (error) {
-      console.log("Erro ao salvar vendas:", error);
-    }
-  };
-
   const handleAddVenda = async () => {
-    if (!nomeCliente || !produto || parseFloat(valorTotal) <= 0) {
+    if (
+      !nomeCliente ||
+      !produto ||
+      !quantidade ||
+      isNaN(parseFloat(valorTotal)) ||
+      parseFloat(valorTotal) <= 0
+    ) {
       Alert.alert("Erro", "Preencha todos os campos corretamente.");
       return;
     }
 
     const novaVenda: IVenda = {
-      numPedido,
+      id,
       nome: nomeCliente,
       produto,
       data: new Date(),
       valor: parseFloat(valorTotal),
       localizacao,
+      quantidade: parseInt(quantidade),
     };
 
     const novasVendas = [...vendas, novaVenda];
+    console.log("Nova venda adicionada:", novaVenda);
+
     setVendas(novasVendas);
-    setNumPedido(numPedido + 1);
-    saveVendas(novasVendas);
+
+    setId((prevId) => prevId + 1);
+
+    try {
+      await AsyncStorage.setItem("vendas", JSON.stringify(novasVendas));
+    } catch (error) {
+      console.log("Erro ao salvar vendas:", error);
+    }
 
     setNomeCliente("");
     setProduto("");
     setValorTotal("");
     setVisible(false);
+    setQuantidade("");
   };
 
   return (
     <View style={styles.container}>
       <Header />
-      <TouchableOpacity style={styles.addButton} onPress={() => setVisible(true)}>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setVisible(true)}
+      >
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
 
@@ -121,12 +147,25 @@ export default function VendasList() {
               onChangeText={setValorTotal}
               keyboardType="numeric"
             />
+            <TextInput
+              style={styles.textInput}
+              placeholder="Quantidade"
+              value={quantidade}
+              onChangeText={setQuantidade}
+              keyboardType="numeric"
+            />
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.saveButtonModal} onPress={handleAddVenda}>
+              <TouchableOpacity
+                style={styles.saveButtonModal}
+                onPress={handleAddVenda}
+              >
                 <Text style={styles.addButtonText}>Salvar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelButtonModal} onPress={() => setVisible(false)}>
+              <TouchableOpacity
+                style={styles.cancelButtonModal}
+                onPress={() => setVisible(false)}
+              >
                 <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
             </View>
@@ -136,16 +175,31 @@ export default function VendasList() {
 
       <FlatList
         data={vendas}
-        keyExtractor={(item) => item.numPedido.toString()}
+        keyExtractor={(item) => (item.id ? item.id.toString() : "")}
         renderItem={({ item }) => (
-          <View style={styles.personContainer}>
-            <Text style={styles.personDescription}>Pedido #{item.numPedido}</Text>
-            <Text style={styles.personDescription}>Cliente: {item.nome}</Text>
-            <Text style={styles.personDescription}>Produto: {item.produto}</Text>
-            <Text style={styles.personDescription}>Data: {new Date(item.data).toLocaleDateString()}</Text>
-            <Text style={styles.personDescription}>Valor: R$ {item.valor.toFixed(2)}</Text>
-            <Text style={styles.personDescription}>{item.localizacao}</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push(`/screen/VendasCrud?id=${item.id}`)}
+          >
+            <View style={styles.personContainer}>
+              <Text style={styles.personDescription}>
+                Pedido #{item.id} 
+              </Text>
+              <Text style={styles.personDescription}>Cliente: {item.nome}</Text>
+              <Text style={styles.personDescription}>
+                Produto: {item.produto}
+              </Text>
+              {/* <Text style={styles.personDescription}>Quantidade: {item.quantidade}</Text>
+              <Text style={styles.personDescription}>
+                Data: {new Date(item.data).toLocaleDateString()}
+              </Text>
+              <Text style={styles.personDescription}>
+                Valor: R$ {item.valor.toFixed(2)}
+              </Text>
+              <Text style={styles.personDescription}>{item.localizacao}</Text> */}
+              <Text style={styles.text}>...</Text>
+            </View>
+          </TouchableOpacity>
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -164,6 +218,9 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     flex: 1,
   },
+  card: {
+    top: 0,
+  },
   addButton: {
     backgroundColor: "#4CAF50",
     width: 50,
@@ -175,7 +232,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 5,
     marginBottom: 15,
-    marginTop: 15,
+    marginTop: 45,
+  },
+  text: {
+    fontWeight: "bold",
+    fontSize: 17,
   },
   addButtonText: {
     color: "#fff",

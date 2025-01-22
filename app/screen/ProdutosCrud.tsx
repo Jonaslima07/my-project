@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Modal, TextInput, FlatList, Alert, StyleS
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { IProdutos } from "@/components/interface/IProdutos";
-
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 export default function ProdutosCrud() {
   const [visible, setVisible] = useState(false);
@@ -12,10 +12,9 @@ export default function ProdutosCrud() {
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [produtos, setProdutos] = useState<IProdutos[]>([]);
-  const [numProduto, setNumProduto] = useState(1);
-  const [editMode, setEditMode] = useState(false);
-  const [editProduto, setEditProduto] = useState<IProdutos | null>(null);
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const { id } = useLocalSearchParams(); 
+  const router = useRouter();
 
   useEffect(() => {
     loadProdutos();
@@ -27,18 +26,28 @@ export default function ProdutosCrud() {
     }
   }, [visible]);
 
-  const loadProdutos = async () => {
+  useEffect(() => {
+    if (id) {
+      loadProdutos(Number(id));
+    }
+  }, [id]);
+
+  const loadProdutos = async (id?: number) => {
     try {
       const savedProdutos = await AsyncStorage.getItem("produtos");
       if (savedProdutos) {
         const produtosParsed = JSON.parse(savedProdutos);
         if (Array.isArray(produtosParsed)) {
-          setProdutos(produtosParsed);
-          const maxNumProduto = Math.max(
-            ...produtosParsed.map((produto: IProdutos) => produto.numProduto),
-            0
-          );
-          setNumProduto(maxNumProduto + 1);
+          if (id) {
+            const produto = produtosParsed.find((p: IProdutos) => p.id === id);
+            if (produto) {
+              setProdutos([produto]);
+            } else {
+              Alert.alert("Erro", "Produto não encontrado.");
+            }
+          } else {
+            setProdutos(produtosParsed);
+          }
         }
       }
     } catch (error) {
@@ -65,49 +74,48 @@ export default function ProdutosCrud() {
     }
   };
 
+  const handleDeleteProduto = async () => {
+    if (!id) {
+      Alert.alert("Erro", "Produto não encontrado.");
+      return;
+    }
+  
+    const idNumber = Number(id);
+    
+   
+    const novosProdutos = produtos.filter((produto) => produto.id !== idNumber);
+  
+   
+    await saveProdutos(novosProdutos);
+  
+    
+    setProdutos(novosProdutos);
+  
+   
+    router.push("/Produtos");
+  };
+  
+
   const handleAddProduto = async () => {
-    if (
-      !nomeProduto ||
-      !descricao ||
-      !marca ||
-      isNaN(parseFloat(valor)) ||
-      parseFloat(valor) <= 0
-    ) {
+    if (!nomeProduto || !descricao || !marca || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
       Alert.alert("Erro", "Preencha todos os campos corretamente.");
       return;
     }
 
-    const produtoCounter = await AsyncStorage.getItem("produto_counter");
-    const nextNumProduto = produtoCounter ? parseInt(produtoCounter) + 1 : 1;
-
     const novoProduto: IProdutos = {
-      numProduto: nextNumProduto,
+      id: produtos.length + 1,
       nome: nomeProduto,
       marca,
       descricao,
       valor: parseFloat(valor),
       preco: 0,
-      localizacao: location
-        ? `${location.latitude}, ${location.longitude}`
-        : "Não disponível",
-      id: 0
+      localizacao: location ? `${location.latitude}, ${location.longitude}` : "Não disponível",
     };
 
     const novosProdutos = [...produtos, novoProduto];
     setProdutos(novosProdutos);
     saveProdutos(novosProdutos);
 
-    await AsyncStorage.setItem("produto_counter", nextNumProduto.toString());
-
-    resetForm();
-  };
-
-  const handleDeleteProduto = (numProduto: number) => {
-    const novosProdutos = produtos.filter(
-      (produto) => produto.numProduto !== numProduto
-    );
-    setProdutos(novosProdutos);
-    saveProdutos(novosProdutos);
     resetForm();
   };
 
@@ -116,14 +124,10 @@ export default function ProdutosCrud() {
     setMarca("");
     setDescricao("");
     setValor("");
-    setEditMode(false);
-    setEditProduto(null);
     setVisible(false);
   };
 
   const handleEditProduto = (produto: IProdutos) => {
-    setEditMode(true);
-    setEditProduto(produto);
     setNomeProduto(produto.nome);
     setMarca(produto.marca);
     setDescricao(produto.descricao);
@@ -131,43 +135,19 @@ export default function ProdutosCrud() {
     setVisible(true);
   };
 
-  const handleUpdateProduto = async () => {
-    if (!editProduto) return;
-
-    const updatedProduto: IProdutos = {
-      ...editProduto,
-      nome: nomeProduto,
-      marca,
-      descricao,
-      valor: parseFloat(valor),
-    };
-
-    const novosProdutos = produtos.map((produto) =>
-      produto.numProduto === editProduto.numProduto ? updatedProduto : produto
-    );
-
-    setProdutos(novosProdutos);
-    saveProdutos(novosProdutos);
-
-    resetForm();
-  };
-
   return (
     <View style={styles.container}>
       
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setVisible(true)}
-      >
-        <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
+      {id && (
+        <TouchableOpacity style={styles.deleteButtonHeader} onPress={handleDeleteProduto}>
+          <Text style={styles.deleteButtonText}>X</Text>
+        </TouchableOpacity>
+      )}
 
       <Modal visible={visible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {editMode ? "Editar Produto" : "Novo Produto"}
-            </Text>
+            <Text style={styles.modalTitle}>Novo Produto</Text>
             <TextInput
               style={styles.textInput}
               placeholder="Nome do Produto"
@@ -193,15 +173,12 @@ export default function ProdutosCrud() {
               onChangeText={setValor}
               keyboardType="numeric"
             />
-
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.saveButtonModal}
-                onPress={editMode ? handleUpdateProduto : handleAddProduto}
+                onPress={handleAddProduto}
               >
-                <Text style={styles.buttonText}>
-                  {editMode ? "Atualizar" : "Salvar"}
-                </Text>
+                <Text style={styles.buttonText}>Salvar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelButtonModal}
@@ -213,41 +190,25 @@ export default function ProdutosCrud() {
           </View>
         </View>
       </Modal>
-
+      
       <FlatList
         data={produtos}
-        keyExtractor={(item) => item?.id?.toString() || ''}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.personContainer}>
-            <Text style={styles.personDescription}>
-              Produto #{item.numProduto}
-            </Text>
             <Text style={styles.personDescription}>Nome: {item.nome}</Text>
             <Text style={styles.personDescription}>Marca: {item.marca}</Text>
+            <Text style={styles.personDescription}>Descrição: {item.descricao}</Text>
             <Text style={styles.personDescription}>
-              Descrição: {item.descricao}
+              Valor: R$ {item.valor && !isNaN(item.valor) ? item.valor.toFixed(2) : "Valor inválido"}
             </Text>
-            <Text style={styles.personDescription}>
-              Valor: R${" "}
-              {item.valor && !isNaN(item.valor)
-                ? item.valor.toFixed(2)
-                : "Valor inválido"}
-            </Text>
-            <Text style={styles.personDescription}>
-              Localização: {item.localizacao}
-            </Text>
+            <Text style={styles.personDescription}>Localização: {item.localizacao}</Text>
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 onPress={() => handleEditProduto(item)}
                 style={styles.editButton}
               >
                 <Text style={styles.editButtonText}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDeleteProduto(item.numProduto)}
-                style={styles.deleteButton}
-              >
-                <Text style={styles.deleteButtonText}>Excluir</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -256,7 +217,6 @@ export default function ProdutosCrud() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cardContainer}
       />
-      
     </View>
   );
 }
@@ -268,6 +228,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#ccc",
     paddingTop: 15,
     flex:1,
+  },
+  deleteButtonHeader: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginLeft: 100,
+    left:78,
+    width: 50,
+    marginTop: 10,
+    alignItems: 'center',
   },
   addButton: {
     backgroundColor: "#4CAF50",
@@ -346,7 +317,7 @@ const styles = StyleSheet.create({
   personContainer: {
     backgroundColor: "#fff",
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 160,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#333",
@@ -381,9 +352,11 @@ const styles = StyleSheet.create({
     width: "30%",
   },
   deleteButtonText: {
-    color: "#fff",
-    fontSize: 14,
+    color: "#black",
+    fontSize: 20,
     fontWeight: "bold",
+    left: 1,
+    alignItems:'center',
   },
   editButtonText: {
     color: "#fff",
