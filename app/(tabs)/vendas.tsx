@@ -169,7 +169,7 @@ export default function Vendas() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}
-            onPress={() => router.push(`/screen/VendasDetails?id=${item.id}`)}
+            onPress={() => router.push(`/screen/VendaDetails?id=${item.id}`)}
           >
             <View style={styles.personContainer}>
               <Text style={styles.personDescription}>

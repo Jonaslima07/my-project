@@ -3,10 +3,9 @@ import { View, Text, TouchableOpacity, Modal, TextInput, FlatList, Alert, StyleS
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { IProdutos } from "@/components/interface/IProdutos";
-import { useRouter } from "expo-router";
-import Header from "@/components/Header";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
-export default function ProdutosList() {
+export default function ProdutosDetails() {
   const [visible, setVisible] = useState(false);
   const [nomeProduto, setNomeProduto] = useState("");
   const [marca, setMarca] = useState("");
@@ -14,6 +13,7 @@ export default function ProdutosList() {
   const [valor, setValor] = useState("");
   const [produtos, setProdutos] = useState<IProdutos[]>([]);
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const { id } = useLocalSearchParams();
   const router = useRouter();
 
   useEffect(() => {
@@ -26,13 +26,28 @@ export default function ProdutosList() {
     }
   }, [visible]);
 
-  const loadProdutos = async () => {
+  useEffect(() => {
+    if (id) {
+      loadProdutos(Number(id));
+    }
+  }, [id]);
+
+  const loadProdutos = async (id?: number) => {
     try {
       const savedProdutos = await AsyncStorage.getItem("produtos");
       if (savedProdutos) {
         const produtosParsed = JSON.parse(savedProdutos);
         if (Array.isArray(produtosParsed)) {
-          setProdutos(produtosParsed);
+          if (id) {
+            const produto = produtosParsed.find((p: IProdutos) => p.id === id);
+            if (produto) {
+              setProdutos([produto]);
+            } else {
+              Alert.alert("Erro", "Produto não encontrado.");
+            }
+          } else {
+            setProdutos(produtosParsed);
+          }
         }
       }
     } catch (error) {
@@ -41,19 +56,14 @@ export default function ProdutosList() {
   };
 
   const requestLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Erro", "Permissão de localização negada.");
-        return;
-      }
-
-      const loc = await Location.getCurrentPositionAsync({});
-      setLocation(loc.coords);
-    } catch (error) {
-      Alert.alert("Erro", "Não foi possível obter a localização.");
-      console.error(error);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Erro", "Permissão de localização negada.");
+      return;
     }
+
+    const loc = await Location.getCurrentPositionAsync({});
+    setLocation(loc.coords);
   };
 
   const saveProdutos = async (produtos: IProdutos[]) => {
@@ -64,8 +74,44 @@ export default function ProdutosList() {
     }
   };
 
+  const handleDeleteProduto = async () => {
+    if (!id) {
+      Alert.alert("Erro", "Produto não encontrado.");
+      return;
+    }
+
+    const idNumber = Number(id);
+
+    try {
+      const savedProdutos = await AsyncStorage.getItem("produtos");
+      if (savedProdutos) {
+        const produtosParsed: IProdutos[] = JSON.parse(savedProdutos);
+
+        const novosProdutos = produtosParsed.filter(
+          (produto) => produto.id !== idNumber
+        );
+
+        await saveProdutos(novosProdutos);
+
+        setProdutos(novosProdutos);
+
+        router.push("/Produtos");
+      } else {
+        Alert.alert("Erro", "Não há produtos para excluir.");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir produto:", error);
+    }
+  };
+
   const handleAddProduto = async () => {
-    if (!nomeProduto || !descricao || !marca || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
+    if (
+      !nomeProduto ||
+      !descricao ||
+      !marca ||
+      isNaN(parseFloat(valor)) ||
+      parseFloat(valor) <= 0
+    ) {
       Alert.alert("Erro", "Preencha todos os campos corretamente.");
       return;
     }
@@ -77,8 +123,10 @@ export default function ProdutosList() {
       descricao,
       valor: parseFloat(valor),
       preco: 0,
-      localizacao: location ? `${location.latitude}, ${location.longitude}` : "Não disponível",
-      data: new Date()
+      data: new Date(),
+      localizacao: location
+        ? `${location.latitude}, ${location.longitude}`
+        : "Não disponível",
     };
 
     const novosProdutos = [...produtos, novoProduto];
@@ -96,12 +144,24 @@ export default function ProdutosList() {
     setVisible(false);
   };
 
+  const handleEditProduto = (produto: IProdutos) => {
+    setNomeProduto(produto.nome);
+    setMarca(produto.marca);
+    setDescricao(produto.descricao);
+    setValor(produto.valor.toString());
+    setVisible(true);
+  };
+
   return (
     <View style={styles.container}>
-      <Header/>
-      <TouchableOpacity style={styles.addButton} onPress={() => setVisible(true)}>
-        <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
+      {id && (
+        <TouchableOpacity
+          style={styles.deleteButtonHeader}
+          onPress={handleDeleteProduto}
+        >
+          <Text style={styles.deleteButtonText}>X</Text>
+        </TouchableOpacity>
+      )}
 
       <Modal visible={visible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
@@ -125,7 +185,6 @@ export default function ProdutosList() {
               value={descricao}
               onChangeText={setDescricao}
             />
-           
             <TextInput
               style={styles.textInput}
               placeholder="Valor"
@@ -133,12 +192,17 @@ export default function ProdutosList() {
               onChangeText={setValor}
               keyboardType="numeric"
             />
-
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.saveButtonModal} onPress={handleAddProduto}>
+              <TouchableOpacity
+                style={styles.saveButtonModal}
+                onPress={handleAddProduto}
+              >
                 <Text style={styles.buttonText}>Salvar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelButtonModal} onPress={resetForm}>
+              <TouchableOpacity
+                style={styles.cancelButtonModal}
+                onPress={resetForm}
+              >
                 <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
             </View>
@@ -150,22 +214,36 @@ export default function ProdutosList() {
         data={produtos}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => router.push(`/screen/ProdutoDetails?id=${item.id}`)}
-          >
           <View style={styles.personContainer}>
-            <Text style={styles.personDescription}>Produto #{item.id}</Text>
             <Text style={styles.personDescription}>Nome: {item.nome}</Text>
             <Text style={styles.personDescription}>Marca: {item.marca}</Text>
             <Text style={styles.personDescription}>Data: {new Date(item.data).toLocaleDateString()}</Text>
-            <Text style={styles.text}>...</Text>
+            <Text style={styles.personDescription}>
+              Descrição: {item.descricao}
+            </Text>
+            <Text style={styles.personDescription}>
+              Valor: R${" "}
+              {item.valor && !isNaN(item.valor)
+                ? item.valor.toFixed(2)
+                : "Valor inválido"}
+            </Text>
+            <Text style={styles.personDescription}>
+              Localização: {item.localizacao}
+            </Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                onPress={() => handleEditProduto(item)}
+                style={styles.editButton}
+              >
+                <Text style={styles.editButtonText}>Editar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          </TouchableOpacity>
         )}
+        horizontal
+        showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cardContainer}
       />
-      
     </View>
   );
 }
@@ -176,16 +254,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ccc",
     paddingTop: 15,
-    flex:1,
-    marginTop:10,
-    
+    flex: 1,
   },
-  card: {
-    top:0,
-  },
-  text:{
-    fontWeight:'bold',
-    fontSize:17,
+  deleteButtonHeader: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginLeft: 100,
+    left: 78,
+    width: 50,
+    marginTop: 10,
+    alignItems: "center",
   },
   addButton: {
     backgroundColor: "#4CAF50",
@@ -197,8 +277,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    marginBottom: 45,
-    marginTop: 45,
+    marginBottom: 15,
+    marginTop: 30,
   },
   addButtonText: {
     color: "#fff",
@@ -211,14 +291,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     flex: 1,
     marginRight: 0,
-    alignItems: "center",
-  },
-  cancelButtonModal: {
-    backgroundColor: "#f44336",
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 10,
     alignItems: "center",
   },
   textInput: {
@@ -252,34 +324,70 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 30,
   },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
+  cancelButtonModal: {
+    backgroundColor: "#f44336",
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
+    alignItems: "center",
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
   },
   cardContainer: {
     alignItems: "center",
-    
+    paddingTop: 0,
   },
   personContainer: {
     backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: "#black",
+    padding: 10,
+    marginBottom: 160,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#333",
     elevation: 1,
-    width: 300,
-    position: "fixed",
-    marginTop: 30,
-    bottom:30,
+    width: "100%",
+    position: "relative",
+    marginTop: 10,
   },
   personDescription: {
     fontSize: 14,
     color: "#555",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 5,
+  },
+  deleteButton: {
+    backgroundColor: "#f44336",
+    paddingVertical: 8,
+    borderRadius: 50,
+    alignItems: "center",
+    width: "30%",
+  },
+  editButton: {
+    backgroundColor: "blue",
+    paddingVertical: 8,
+    borderRadius: 50,
+    alignItems: "center",
+    width: "30%",
+  },
+  deleteButtonText: {
+    color: "#black",
+    fontSize: 20,
+    fontWeight: "bold",
+    left: 1,
+    alignItems: "center",
+  },
+  editButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
