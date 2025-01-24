@@ -12,8 +12,9 @@ export default function ProdutosCrud() {
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [produtos, setProdutos] = useState<IProdutos[]>([]);
-  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
-  const { id } = useLocalSearchParams(); 
+  const [location, setLocation] =
+    useState<Location.LocationObjectCoords | null>(null);
+  const { id } = useLocalSearchParams();
   const router = useRouter();
 
   useEffect(() => {
@@ -79,25 +80,39 @@ export default function ProdutosCrud() {
       Alert.alert("Erro", "Produto não encontrado.");
       return;
     }
-  
+
     const idNumber = Number(id);
-    
-   
-    const novosProdutos = produtos.filter((produto) => produto.id !== idNumber);
-  
-   
-    await saveProdutos(novosProdutos);
-  
-    
-    setProdutos(novosProdutos);
-  
-   
-    router.push("/Produtos");
+
+    try {
+      const savedProdutos = await AsyncStorage.getItem("produtos");
+      if (savedProdutos) {
+        const produtosParsed: IProdutos[] = JSON.parse(savedProdutos);
+
+        const novosProdutos = produtosParsed.filter(
+          (produto) => produto.id !== idNumber
+        );
+
+        await saveProdutos(novosProdutos);
+
+        setProdutos(novosProdutos);
+
+        router.push("/Produtos");
+      } else {
+        Alert.alert("Erro", "Não há produtos para excluir.");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir produto:", error);
+    }
   };
-  
 
   const handleAddProduto = async () => {
-    if (!nomeProduto || !descricao || !marca || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
+    if (
+      !nomeProduto ||
+      !descricao ||
+      !marca ||
+      isNaN(parseFloat(valor)) ||
+      parseFloat(valor) <= 0
+    ) {
       Alert.alert("Erro", "Preencha todos os campos corretamente.");
       return;
     }
@@ -109,7 +124,9 @@ export default function ProdutosCrud() {
       descricao,
       valor: parseFloat(valor),
       preco: 0,
-      localizacao: location ? `${location.latitude}, ${location.longitude}` : "Não disponível",
+      localizacao: location
+        ? `${location.latitude}, ${location.longitude}`
+        : "Não disponível",
     };
 
     const novosProdutos = [...produtos, novoProduto];
@@ -137,9 +154,11 @@ export default function ProdutosCrud() {
 
   return (
     <View style={styles.container}>
-      
       {id && (
-        <TouchableOpacity style={styles.deleteButtonHeader} onPress={handleDeleteProduto}>
+        <TouchableOpacity
+          style={styles.deleteButtonHeader}
+          onPress={handleDeleteProduto}
+        >
           <Text style={styles.deleteButtonText}>X</Text>
         </TouchableOpacity>
       )}
@@ -190,7 +209,7 @@ export default function ProdutosCrud() {
           </View>
         </View>
       </Modal>
-      
+
       <FlatList
         data={produtos}
         keyExtractor={(item) => item.id.toString()}
@@ -198,11 +217,18 @@ export default function ProdutosCrud() {
           <View style={styles.personContainer}>
             <Text style={styles.personDescription}>Nome: {item.nome}</Text>
             <Text style={styles.personDescription}>Marca: {item.marca}</Text>
-            <Text style={styles.personDescription}>Descrição: {item.descricao}</Text>
             <Text style={styles.personDescription}>
-              Valor: R$ {item.valor && !isNaN(item.valor) ? item.valor.toFixed(2) : "Valor inválido"}
+              Descrição: {item.descricao}
             </Text>
-            <Text style={styles.personDescription}>Localização: {item.localizacao}</Text>
+            <Text style={styles.personDescription}>
+              Valor: R${" "}
+              {item.valor && !isNaN(item.valor)
+                ? item.valor.toFixed(2)
+                : "Valor inválido"}
+            </Text>
+            <Text style={styles.personDescription}>
+              Localização: {item.localizacao}
+            </Text>
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 onPress={() => handleEditProduto(item)}
@@ -227,7 +253,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ccc",
     paddingTop: 15,
-    flex:1,
+    flex: 1,
   },
   deleteButtonHeader: {
     backgroundColor: "#fff",
@@ -235,10 +261,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: "flex-start",
     marginLeft: 100,
-    left:78,
+    left: 78,
     width: 50,
     marginTop: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   addButton: {
     backgroundColor: "#4CAF50",
@@ -312,7 +338,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     alignItems: "center",
-    paddingTop:0, 
+    paddingTop: 0,
   },
   personContainer: {
     backgroundColor: "#fff",
@@ -356,7 +382,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     left: 1,
-    alignItems:'center',
+    alignItems: "center",
   },
   editButtonText: {
     color: "#fff",

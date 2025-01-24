@@ -5,9 +5,9 @@ const Footer = () => {
   return (
     <SafeAreaView style={styles.footerContainer}>
       <Text style={styles.footerText}>Estamos localizados:</Text>
-      <Text style={styles.locationText}>Na Avenida Paulista, 123</Text>
-      <Text style={styles.locationText}>Cidade São Paulo, SP</Text>
-      <Text style={styles.locationText}>CEP: 01153-000</Text>
+      <Text style={styles.locationText}>Av. Dom Pedro II, Centro</Text>
+      <Text style={styles.locationText}>Guarabira - PB</Text>
+      <Text style={styles.locationText}>CEP: 58200-000</Text>
     </SafeAreaView>
   );
 };
@@ -17,9 +17,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'green',
     padding: 3,
     alignItems: 'center',
-    borderTopWidth: 0,
     width: "100%",
-    
     
   },
   footerText: {

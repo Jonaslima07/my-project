@@ -1,20 +1,10 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  Alert,
-} from "react-native";
+import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, FlatList, Alert } from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { IVenda } from "@/components/interface/IVenda";
 import { useRouter } from "expo-router";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 
 export default function Vendas() {
   const [visible, setVisible] = useState(false);
@@ -189,23 +179,15 @@ export default function Vendas() {
               <Text style={styles.personDescription}>
                 Produto: {item.produto}
               </Text>
-              {/* <Text style={styles.personDescription}>Quantidade: {item.quantidade}</Text>
-              <Text style={styles.personDescription}>
-                Data: {new Date(item.data).toLocaleDateString()}
-              </Text>
-              <Text style={styles.personDescription}>
-                Valor: R$ {item.valor.toFixed(2)}
-              </Text>
-              <Text style={styles.personDescription}>{item.localizacao}</Text> */}
+              
               <Text style={styles.text}>...</Text>
             </View>
           </TouchableOpacity>
         )}
-        horizontal
-        showsHorizontalScrollIndicator={false}
+        
         contentContainerStyle={styles.cardContainer}
       />
-      <Footer />
+     
     </View>
   );
 }
@@ -216,10 +198,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ccc",
     paddingTop: 15,
-    flex: 1,
+    flex:1,
+    marginTop:10,
+    
   },
   card: {
-    top: 0,
+    top:0,
+  },
+  text:{
+    fontWeight:'bold',
+    fontSize:17,
   },
   addButton: {
     backgroundColor: "#4CAF50",
@@ -231,16 +219,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    marginBottom: 15,
+    marginBottom: 45,
     marginTop: 45,
-  },
-  text: {
-    fontWeight: "bold",
-    fontSize: 17,
   },
   addButtonText: {
     color: "#fff",
-    fontSize: 30,
+    fontSize: 25,
     fontWeight: "bold",
   },
   saveButtonModal: {
@@ -297,24 +281,24 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "bold",
   },
   cardContainer: {
     alignItems: "center",
-    paddingTop: 0,
+    
   },
   personContainer: {
     backgroundColor: "#fff",
-    padding: 10,
-    marginBottom: 200,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#333",
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#black",
     elevation: 1,
     width: 300,
     position: "fixed",
-    marginTop: 0,
+    marginTop: 30,
+    bottom:30,
   },
   personDescription: {
     fontSize: 14,

@@ -5,7 +5,6 @@ import * as Location from "expo-location";
 import { IProdutos } from "@/components/interface/IProdutos";
 import { useRouter } from "expo-router";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 
 export default function ProdutosList() {
   const [visible, setVisible] = useState(false);
@@ -98,7 +97,7 @@ export default function ProdutosList() {
 
   return (
     <View style={styles.container}>
-      <Header />
+      <Header/>
       <TouchableOpacity style={styles.addButton} onPress={() => setVisible(true)}>
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
@@ -168,7 +167,7 @@ export default function ProdutosList() {
         )}
         contentContainerStyle={styles.cardContainer}
       />
-      <Footer />
+      
     </View>
   );
 }
@@ -179,7 +178,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ccc",
     paddingTop: 15,
-    flex: 1,
+    flex:1,
+    marginTop:10,
+    
   },
   card: {
     top:0,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    marginBottom: 15,
+    marginBottom: 45,
     marginTop: 45,
   },
   addButtonText: {
@@ -265,19 +266,19 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     alignItems: "center",
-    paddingTop: 0,
+    
   },
   personContainer: {
     backgroundColor: "#fff",
-    padding: 10,
-    marginBottom: 0,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#333",
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#black",
     elevation: 1,
     width: 300,
     position: "fixed",
-    marginTop: 100,
+    marginTop: 30,
+    bottom:30,
   },
   personDescription: {
     fontSize: 14,
