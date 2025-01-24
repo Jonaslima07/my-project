@@ -12,8 +12,9 @@ export default function AppScreen() {
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <Header />
         <Body />
+        <Footer />
       </ScrollView>
-      <Footer />
+      
     </SafeAreaView>
   );
 }
@@ -21,10 +22,9 @@ export default function AppScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ccc',
   },
   scrollViewContent: {
-    flexGrow: 1,
-    marginBottom: 2,
+    marginTop:21,
   },
 });

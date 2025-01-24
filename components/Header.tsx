@@ -22,8 +22,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start", 
     alignItems: "center",
     backgroundColor: "green",
-    width: "100%",
-    height: 120,
+    width: '100%',
+    height: 130,
+    bottom:20,
   },
   image: {
     width: 120,

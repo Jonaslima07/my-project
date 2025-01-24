@@ -22,7 +22,7 @@ const Body = () => {
 
       <Image
         source={{
-          uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQqBFBFYj0NtWooW1dJi-s9zjmNGc3bBoVrZg&s",
+          uri: "https://img.freepik.com/fotos-premium/jovem-mulher-sobre-fundo-azul-isolado-segurando-sacolas-de-compras-e-escrever-uma-mensagem-com-o-celular-para-um-amigo_1368-117215.jpg",
           
         }}
         style={styles.image1} 
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     color: "#333",
     textAlign: "center",
     paddingHorizontal: 10,
-    paddingTop: 8,
+    bottom:40,
     marginTop: 40,
     
   },
@@ -140,9 +140,9 @@ const styles = StyleSheet.create({
   },
   image1:{
     width: '90%',
-    height: 240,
+    height: 250,
     borderRadius: 50,
-    marginTop:40,
+    marginTop:20,
   },
 
   imageUrl: {
