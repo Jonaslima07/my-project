@@ -4,6 +4,7 @@ export interface IProdutos {
     descricao: string;
     preco: number;
     localizacao: string;
+    data: Date;
     valor: number;
     marca: string;
 };

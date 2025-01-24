@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     textAlign: "center",
     fontStyle: "italic",
-    bottom:30,
+    bottom:20,
 
   },
   duvida: {
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   },
   image1:{
     width: '90%',
-    height: 250,
+    height: 280,
     borderRadius: 50,
     marginTop:20,
   },

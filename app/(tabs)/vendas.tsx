@@ -165,11 +165,11 @@ export default function Vendas() {
 
       <FlatList
         data={vendas}
-        keyExtractor={(item) => (item.id ? item.id.toString() : "")}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}
-            onPress={() => router.push(`/screen/VendasCrud?id=${item.id}`)}
+            onPress={() => router.push(`/screen/VendasDetails?id=${item.id}`)}
           >
             <View style={styles.personContainer}>
               <Text style={styles.personDescription}>
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: "#fff",
-    fontSize: 25,
+    fontSize: 20,
     fontWeight: "bold",
   },
   saveButtonModal: {
@@ -283,6 +283,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 20,
     fontWeight: "bold",
+    marginTop:0,
   },
   cardContainer: {
     alignItems: "center",
