@@ -156,11 +156,6 @@ export default function ProdutosList() {
             <Text style={styles.personDescription}>Produto #{item.id}</Text>
             <Text style={styles.personDescription}>Nome: {item.nome}</Text>
             <Text style={styles.personDescription}>Marca: {item.marca}</Text>
-            {/* <Text style={styles.personDescription}>Descrição: {item.descricao}</Text>
-            <Text style={styles.personDescription}>
-              Valor: R$ {item.valor?.toFixed(2)}
-            </Text>
-            <Text style={styles.personDescription}>Localização: {item.localizacao}</Text> */}
             <Text style={styles.text}>...</Text>
           </View>
           </TouchableOpacity>
